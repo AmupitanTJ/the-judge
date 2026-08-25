@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787622200000,
+      "tag": "0000_judge_foundation",
+      "breakpoints": true
+    }
+  ]
 }

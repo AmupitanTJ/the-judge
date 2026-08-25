@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+type LegalDocument = { id:string; canonicalTitle:string; citation:string|null; documentType:string; jurisdiction:string; sourceUrl:string; sourcePublisher:string; legalStatus:string; reviewStatus:string; lastVerifiedAt:string|null };
+type Matter = { id:string; title:string; reference:string|null; jurisdiction:string; status:string; updatedAt?:string };
+type Viewer = { displayName:string; email:string };
 
 const navItems = ["Ask The Judge", "Research", "Library", "Documents", "Matters"];
 
@@ -15,6 +19,46 @@ export default function Home() {
   const [active, setActive] = useState("Ask The Judge");
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [viewer, setViewer] = useState<Viewer | null>(null);
+  const [documents, setDocuments] = useState<LegalDocument[]>([]);
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [matters, setMatters] = useState<Matter[]>([]);
+  const [matterTitle, setMatterTitle] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/me").then((response) => response.ok ? response.json() : null).then((data) => data?.user && setViewer(data.user)).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (active === "Library") loadLibrary();
+    if (active === "Matters") loadMatters();
+  }, [active]);
+
+  async function loadLibrary(search = "") {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/library?q=${encodeURIComponent(search)}`);
+      const data = response.ok ? await response.json() : { documents: [] };
+      setDocuments(data.documents ?? []);
+    } finally { setLoading(false); }
+  }
+
+  async function loadMatters() {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/matters");
+      const data = response.ok ? await response.json() : { matters: [] };
+      setMatters(data.matters ?? []);
+    } finally { setLoading(false); }
+  }
+
+  async function createMatter(event: React.FormEvent) {
+    event.preventDefault();
+    if (!matterTitle.trim()) return;
+    const response = await fetch("/api/matters", { method:"POST", headers:{ "content-type":"application/json" }, body:JSON.stringify({ title:matterTitle, jurisdiction:"Federal" }) });
+    if (response.ok) { setMatterTitle(""); await loadMatters(); }
+  }
 
   function ask(event: React.FormEvent) {
     event.preventDefault();
@@ -59,9 +103,9 @@ export default function Home() {
         </div>
 
         <div className="profile">
-          <span className="avatar">AO</span>
-          <span><strong>Ada Okafor</strong><small>Legal practitioner</small></span>
-          <button aria-label="Account menu">•••</button>
+          <span className="avatar">{viewer?.displayName?.split(/\s+/).map((word) => word[0]).join("").slice(0,2).toUpperCase() || "TJ"}</span>
+          <span><strong>{viewer?.displayName || "Signed-in user"}</strong><small>{viewer?.email || "Private workspace"}</small></span>
+          <a href="/signout-with-chatgpt?return_to=/" aria-label="Sign out">↗</a>
         </div>
       </aside>
 
@@ -74,7 +118,30 @@ export default function Home() {
           </div>
         </header>
 
-        {!submitted ? (
+        {active === "Library" ? (
+          <section className="collection-view">
+            <div className="collection-head"><div><p className="eyebrow">Foundation legal corpus</p><h1>Legal library</h1><p>Search authority metadata by title, citation, or document type.</p></div><span className="count-badge">{documents.length} authorities</span></div>
+            <form className="library-search" onSubmit={(event) => { event.preventDefault(); loadLibrary(libraryQuery); }}>
+              <label htmlFor="library-query" className="sr-only">Search legal library</label><input id="library-query" value={libraryQuery} onChange={(event) => setLibraryQuery(event.target.value)} placeholder="Search the Constitution, Acts, judgments…"/><button>Search</button>
+            </form>
+            <div className="library-table" role="table" aria-label="Legal authorities">
+              <div className="library-row library-labels" role="row"><span>Authority</span><span>Jurisdiction</span><span>Review</span><span>Source</span></div>
+              {loading ? <p className="empty-state">Loading the legal library…</p> : documents.length ? documents.map((document) => (
+                <div className="library-row" role="row" key={document.id}>
+                  <span><strong>{document.canonicalTitle}</strong><small>{document.citation || document.documentType}</small></span><span>{document.jurisdiction}</span><span className="review-pill">{document.reviewStatus.replaceAll("_", " ")}</span><a href={document.sourceUrl} target="_blank" rel="noreferrer">{document.sourcePublisher} ↗</a>
+                </div>
+              )) : <p className="empty-state">No matching authorities. The foundation corpus is being prepared for legal review.</p>}
+            </div>
+          </section>
+        ) : active === "Matters" ? (
+          <section className="collection-view">
+            <div className="collection-head"><div><p className="eyebrow">Private practitioner workspace</p><h1>Your matters</h1><p>Research and documents added here remain tied to your account.</p></div><span className="count-badge">{matters.length} active</span></div>
+            <form className="matter-form" onSubmit={createMatter}><label htmlFor="matter-title" className="sr-only">Matter title</label><input id="matter-title" value={matterTitle} onChange={(event) => setMatterTitle(event.target.value)} placeholder="e.g. Okafor v. Bello — tenancy dispute"/><button>Create matter</button></form>
+            <div className="matter-grid">
+              {loading ? <p className="empty-state">Loading your matters…</p> : matters.length ? matters.map((matter) => <article className="matter-card" key={matter.id}><span className="eyebrow">{matter.jurisdiction}</span><h3>{matter.title}</h3><p>{matter.reference || "No client reference"}</p><footer><span>Active</span><button onClick={() => { setActive("Ask The Judge"); setQuery(`Research this matter: ${matter.title}`); }}>Open research →</button></footer></article>) : <div className="empty-panel"><span>M</span><h3>No matters yet</h3><p>Create a private matter to organise research, authorities, and documents.</p></div>}
+            </div>
+          </section>
+        ) : !submitted ? (
           <section className="ask-view">
             <div className="hero-copy">
               <p className="eyebrow">Nigerian legal intelligence</p>
