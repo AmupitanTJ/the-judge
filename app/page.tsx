@@ -70,7 +70,7 @@ export default function Home() {
       <aside className="sidebar">
         <div>
           <a className="brand" href="#" aria-label="The Judge home">
-            <span className="brand-mark">TJ</span>
+            <span className="brand-mark"><img src="/brand/the-judge-app-icon.png" alt="" /></span>
             <span>THE JUDGE</span>
           </a>
 
