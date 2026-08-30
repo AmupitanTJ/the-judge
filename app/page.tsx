@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 
 type LegalDocument = { id:string; canonicalTitle:string; citation:string|null; documentType:string; jurisdiction:string; sourceUrl:string; sourcePublisher:string; legalStatus:string; reviewStatus:string; lastVerifiedAt:string|null };
 type Matter = { id:string; title:string; reference:string|null; jurisdiction:string; status:string; updatedAt?:string };
 type Viewer = { displayName:string; email:string };
+type ResearchPassage = { id:string; provisionLabel:string; textContent:string; canonicalTitle:string; citation:string|null; sourceUrl:string; sourcePublisher:string; legalStatus:string; lastVerifiedAt:string|null };
+type ResearchResult = { sessionId:string; status:"grounded"|"insufficient_coverage"; shortAnswer:string|null; passages:ResearchPassage[]; limitations:string; verifiedAsOf:string };
 
 const navItems = ["Ask The Judge", "Research", "Library", "Documents", "Matters"];
 
@@ -19,6 +23,9 @@ export default function Home() {
   const [active, setActive] = useState("Ask The Judge");
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [researchResult, setResearchResult] = useState<ResearchResult | null>(null);
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [researchError, setResearchError] = useState("");
   const [viewer, setViewer] = useState<Viewer | null>(null);
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
   const [libraryQuery, setLibraryQuery] = useState("");
@@ -60,21 +67,44 @@ export default function Home() {
     if (response.ok) { setMatterTitle(""); await loadMatters(); }
   }
 
-  function ask(event: React.FormEvent) {
+  async function ask(event: React.FormEvent) {
     event.preventDefault();
-    if (query.trim()) setSubmitted(true);
+    if (!query.trim()) return;
+    setSubmitted(true);
+    await runResearch(mode);
+  }
+
+  async function runResearch(answerMode: "professional" | "plain") {
+    setMode(answerMode);
+    setResearchLoading(true);
+    setResearchError("");
+    setResearchResult(null);
+    try {
+      const response = await fetch("/api/research", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ question: query, mode: answerMode, jurisdiction: "Federal" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Research could not be completed.");
+      setResearchResult(data);
+    } catch (error) {
+      setResearchError(error instanceof Error ? error.message : "Research could not be completed.");
+    } finally {
+      setResearchLoading(false);
+    }
   }
 
   return (
     <main className="app-shell">
       <aside className="sidebar">
         <div>
-          <a className="brand" href="#" aria-label="The Judge home">
-            <span className="brand-mark"><img src="/brand/the-judge-app-icon.png" alt="" /></span>
+          <Link className="brand" href="/" aria-label="The Judge home">
+            <span className="brand-mark"><Image src="/brand/the-judge-app-icon.png" alt="" width={35} height={35} priority /></span>
             <span>THE JUDGE</span>
-          </a>
+          </Link>
 
-          <button className="new-research" onClick={() => { setQuery(""); setSubmitted(false); }}>
+          <button className="new-research" onClick={() => { setQuery(""); setSubmitted(false); setResearchResult(null); setResearchError(""); }}>
             <span aria-hidden="true">＋</span> New research
           </button>
 
@@ -172,9 +202,9 @@ export default function Home() {
               <p className="eyebrow">Try asking</p>
               <div className="suggestion-grid">
                 {[
-                  ["01", "Explain the requirements for a valid statutory marriage in Nigeria"],
-                  ["02", "What remedies are available for breach of a tenancy agreement in Lagos?"],
-                  ["03", "Summarise the legal duties of company directors under CAMA"],
+                  ["01", "Is the Nigerian Constitution the highest law in Nigeria?"],
+                  ["02", "What happens when another law conflicts with the Constitution?"],
+                  ["03", "Who can make laws on the Exclusive Legislative List?"],
                 ].map(([number, text]) => (
                   <button key={number} onClick={() => setQuery(text)}>
                     <span>{number}</span><p>{text}</p><b>↗</b>
@@ -192,34 +222,26 @@ export default function Home() {
               <p className="eyebrow">Research question</p>
               <h2>{query}</h2>
               <div className="mode-switch" role="group" aria-label="Answer mode">
-                <button className={mode === "professional" ? "selected" : ""} onClick={() => setMode("professional")}>Professional</button>
-                <button className={mode === "plain" ? "selected" : ""} onClick={() => setMode("plain")}>Plain language</button>
+                <button disabled={researchLoading} className={mode === "professional" ? "selected" : ""} onClick={() => runResearch("professional")}>Professional</button>
+                <button disabled={researchLoading} className={mode === "plain" ? "selected" : ""} onClick={() => runResearch("plain")}>Plain language</button>
               </div>
               <article className="answer">
-                <div className="answer-heading"><span className="seal">J</span><p><strong>The Judge</strong><small>Federal law · Verified 24 Aug 2026</small></p></div>
-                {mode === "professional" ? (
-                  <>
-                    <h3>Short answer</h3>
-                    <p>A statutory marriage in Nigeria must comply with the formal requirements prescribed by the Marriage Act. The parties must possess legal capacity, freely consent, and complete the required notice and solemnisation procedure before an authorised person.</p>
-                    <h3>Governing principles</h3>
-                    <p>The marriage must be celebrated in a licensed place or marriage registry, in the presence of witnesses, following the issue of the appropriate certificate. A prohibited degree of consanguinity, an existing statutory marriage, or absence of real consent may affect validity.</p>
-                  </>
-                ) : (
-                  <>
-                    <h3>In everyday language</h3>
-                    <p>For this kind of marriage to be legally recognised, both people must be free to marry, must genuinely agree to it, and must follow the official registration and ceremony steps.</p>
-                    <p>Usually, this means giving notice at a marriage registry, waiting for approval, and having the ceremony conducted by an authorised registrar or minister with witnesses present.</p>
-                  </>
-                )}
-                <div className="citation-line"><button>[1] Marriage Act, Cap M6 LFN 2004, ss. 7–13</button><button>[2] Section 33</button></div>
-                <div className="answer-note"><strong>Important</strong><p>The applicable analysis may differ for customary or Islamic marriages. The parties’ location and facts should be confirmed.</p></div>
+                <div className="answer-heading"><span className="seal">J</span><p><strong>The Judge</strong><small>Federal law · Evidence-first research</small></p></div>
+                {researchLoading ? <div className="research-state"><span className="loading-mark" /><p>Searching verified authorities&hellip;</p></div> : researchError ? <div className="coverage-warning"><strong>Research unavailable</strong><p>{researchError}</p></div> : researchResult?.status === "insufficient_coverage" ? <div className="coverage-warning"><strong>Not enough verified authority</strong><h3>No answer generated</h3><p>{researchResult.limitations}</p></div> : researchResult ? <>
+                  <h3>{mode === "plain" ? "In everyday language" : "Short answer"}</h3>
+                  <p>{researchResult.shortAnswer}</p>
+                  <div className="citation-line">{researchResult.passages.map((passage, index) => <a key={passage.id} href={passage.sourceUrl} target="_blank" rel="noreferrer">[{index + 1}] {passage.provisionLabel}</a>)}</div>
+                  <div className="answer-note"><strong>Coverage limit</strong><p>{researchResult.limitations}</p></div>
+                </> : null}
               </article>
             </div>
             <aside className="authority-panel">
               <p className="eyebrow">Authorities</p>
-              <div className="authority-card active-source"><span>PRIMARY LEGISLATION</span><h3>Marriage Act</h3><p>Cap M6, Laws of the Federation of Nigeria 2004</p><small>Sections 7–13, 33</small></div>
-              <div className="source-excerpt"><p className="eyebrow">Relevant passage</p><blockquote>“Whenever any person desires to marry, one of the parties to the intended marriage shall sign and give to the registrar…”</blockquote><a href="https://lawsofnigeria.placng.org/" target="_blank" rel="noreferrer">View source ↗</a></div>
-              <div className="source-status"><span>● In force</span><span>Federal</span><span>Last checked 24 Aug 2026</span></div>
+              {researchLoading ? <p className="empty-state">Checking the corpus&hellip;</p> : researchResult?.passages.length ? researchResult.passages.map((passage, index) => <div className="authority-result" key={passage.id}>
+                <div className="authority-card active-source"><span>PRIMARY AUTHORITY · [{index + 1}]</span><h3>{passage.canonicalTitle}</h3><p>{passage.citation || "Federal Constitution"}</p><small>{passage.provisionLabel}</small></div>
+                <div className="source-excerpt"><p className="eyebrow">Exact source passage</p><blockquote>&ldquo;{passage.textContent}&rdquo;</blockquote><a href={passage.sourceUrl} target="_blank" rel="noreferrer">View {passage.sourcePublisher} source ↗</a></div>
+              </div>) : <div className="empty-authority"><span>0</span><h3>No authority cited</h3><p>The Judge only displays passages that match the question and have passed source verification.</p></div>}
+              {researchResult?.passages.length ? <div className="source-status"><span>● Source verified</span><span>Federal</span><span>Last checked {researchResult.verifiedAsOf}</span></div> : null}
             </aside>
           </section>
         )}

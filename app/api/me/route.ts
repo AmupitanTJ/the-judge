@@ -5,7 +5,11 @@ export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
 
-  const db = getD1();
+  if (process.env.VERCEL) {
+    return Response.json({ user: { id: user.userId, email: user.email, displayName: user.displayName }, persistence: "preview" });
+  }
+
+  const db = await getD1();
   await db.prepare(`
     INSERT INTO users (id, email, display_name, role)
     VALUES (?1, ?2, ?3, 'practitioner')
