@@ -16,9 +16,9 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "The Judge — Nigerian Legal Intelligence",
     description: "Source-backed Nigerian legal research for practitioners and the public.",
     icons: {
-      icon: "/brand/the-judge-app-icon.png",
-      shortcut: "/brand/the-judge-app-icon.png",
-      apple: "/brand/the-judge-app-icon.png",
+      icon: [{ url: "/brand/the-judge-official-icon.png", type: "image/png", sizes: "512x512" }],
+      shortcut: "/brand/the-judge-official-icon.png",
+      apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
     },
     openGraph: { title: "The Judge", description: "Source-backed answers. Plain-language clarity.", images: [image] },
     twitter: { card: "summary_large_image", title: "The Judge", description: "Nigerian legal intelligence", images: [image] },

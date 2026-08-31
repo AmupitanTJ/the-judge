@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#0A0A0A",
     icons: [
       {
-        src: "/brand/the-judge-app-icon.png",
+        src: "/brand/the-judge-official-icon.png",
         sizes: "512x512",
         type: "image/png",
       },
