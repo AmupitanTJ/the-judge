@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 export type ChatGPTUser = {
@@ -23,12 +23,26 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!userId || !email) {
-    if (process.env.VERCEL) {
+    const workspaceFallback =
+      Boolean(process.env.VERCEL) || process.env.NODE_ENV === "development";
+    if (workspaceFallback) {
+      const cookieStore = await cookies();
+      let workspaceId = cookieStore.get("judge_workspace_id")?.value;
+      if (!workspaceId || !/^[0-9a-f-]{36}$/i.test(workspaceId)) {
+        workspaceId = crypto.randomUUID();
+        cookieStore.set("judge_workspace_id", workspaceId, {
+          httpOnly: true,
+          secure: Boolean(process.env.VERCEL),
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 365,
+          path: "/",
+        });
+      }
       return {
-        userId: "vercel-preview-user",
-        displayName: "Vercel preview",
-        email: "preview@thejudge.ng",
-        fullName: "Vercel preview",
+        userId: `workspace-${workspaceId}`,
+        displayName: "Private workspace",
+        email: `${workspaceId}@workspace.thejudge.ng`,
+        fullName: "Private workspace",
       };
     }
     return null;

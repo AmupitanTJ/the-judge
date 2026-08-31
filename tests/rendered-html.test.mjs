@@ -12,9 +12,10 @@ test("contains The Judge research interface", async () => {
 });
 
 test("research route enforces grounded-source behavior", async () => {
-  const [route, migration] = await Promise.all([
+  const [route, migration, postgresMigration] = await Promise.all([
     readFile(new URL("../app/api/research/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0001_constitution_passages.sql", import.meta.url), "utf8"),
+    readFile(new URL("../postgres/0000_foundation.sql", import.meta.url), "utf8"),
   ]);
 
   assert.match(route, /insufficient_coverage/);
@@ -24,4 +25,7 @@ test("research route enforces grounded-source behavior", async () => {
   assert.match(migration, /Section 1\(3\)/);
   assert.match(migration, /Section 4\(3\)/);
   assert.match(migration, /PLAC Laws of Nigeria|constitution-1999/);
+  assert.match(postgresMigration, /CREATE TABLE IF NOT EXISTS research_sessions/);
+  assert.match(postgresMigration, /CREATE TABLE IF NOT EXISTS matters/);
+  assert.match(route, /persistence: "postgres"/);
 });

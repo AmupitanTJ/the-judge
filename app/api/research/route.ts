@@ -1,6 +1,7 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { getD1 } from "../../../db";
 import { verifiedPassages } from "../../../db/legal-corpus";
+import { getPostgres, hasPostgres } from "../../../db/postgres";
 
 type PassageRow = {
   id: string;
@@ -37,6 +38,39 @@ function scorePassage(question: string, passage: PassageRow) {
   return score;
 }
 
+export async function GET() {
+  const user = await getChatGPTUser();
+  if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
+
+  if (hasPostgres()) {
+    const sql = getPostgres();
+    const sessions = await sql`
+      SELECT r.id, r.question, r.answer_mode AS "answerMode", r.jurisdiction,
+        r.created_at AS "createdAt", COUNT(c.id)::integer AS "citationCount"
+      FROM research_sessions r
+      LEFT JOIN research_citations c ON c.research_session_id = r.id
+      WHERE r.owner_id = ${user.userId}
+      GROUP BY r.id
+      ORDER BY r.created_at DESC
+      LIMIT 50
+    `;
+    return Response.json({ sessions, persistence: "postgres" });
+  }
+
+  if (process.env.VERCEL) return Response.json({ sessions: [], persistence: "preview" });
+  const result = await (await getD1()).prepare(`
+    SELECT r.id, r.question, r.answer_mode AS answerMode, r.jurisdiction,
+      r.created_at AS createdAt, COUNT(c.id) AS citationCount
+    FROM research_sessions r
+    LEFT JOIN research_citations c ON c.research_session_id = r.id
+    WHERE r.owner_id = ?1
+    GROUP BY r.id
+    ORDER BY r.created_at DESC
+    LIMIT 50
+  `).bind(user.userId).all();
+  return Response.json({ sessions: result.results, persistence: "d1" });
+}
+
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
@@ -53,9 +87,23 @@ export async function POST(request: Request) {
   const jurisdiction = payload.jurisdiction === "Federal" ? "Federal" : "Federal";
   if (question.length < 8) return Response.json({ error: "Please enter a fuller legal question." }, { status: 400 });
 
-  const database = process.env.VERCEL ? null : await getD1();
-  const passages = database
-    ? (await database.prepare(`
+  const postgres = hasPostgres() ? getPostgres() : null;
+  const database = !postgres && !process.env.VERCEL ? await getD1() : null;
+  let passages: PassageRow[];
+  if (postgres) {
+    const rows = await postgres`
+      SELECT p.id, p.provision_label AS "provisionLabel", p.text_content AS "textContent",
+        p.keywords, p.professional_summary AS "professionalSummary", p.plain_summary AS "plainSummary",
+        d.canonical_title AS "canonicalTitle", d.citation, d.source_url AS "sourceUrl",
+        d.source_publisher AS "sourcePublisher", d.legal_status AS "legalStatus",
+        d.last_verified_at AS "lastVerifiedAt"
+      FROM legal_passages p
+      JOIN legal_documents d ON d.id = p.document_id
+      WHERE p.review_status = 'source_verified' AND d.jurisdiction = ${jurisdiction}
+    `;
+    passages = rows as unknown as PassageRow[];
+  } else if (database) {
+    passages = (await database.prepare(`
         SELECT p.id, p.provision_label AS provisionLabel, p.text_content AS textContent,
           p.keywords, p.professional_summary AS professionalSummary, p.plain_summary AS plainSummary,
           d.canonical_title AS canonicalTitle, d.citation, d.source_url AS sourceUrl,
@@ -64,8 +112,10 @@ export async function POST(request: Request) {
         FROM legal_passages p
         JOIN legal_documents d ON d.id = p.document_id
         WHERE p.review_status = 'source_verified' AND d.jurisdiction = ?1
-      `).bind(jurisdiction).all<PassageRow>()).results
-    : verifiedPassages as PassageRow[];
+      `).bind(jurisdiction).all<PassageRow>()).results;
+  } else {
+    passages = verifiedPassages as PassageRow[];
+  }
   const ranked = passages
     .map((passage) => ({ ...passage, score: scorePassage(question, passage) }))
     .filter((passage) => passage.score >= 4)
@@ -73,7 +123,17 @@ export async function POST(request: Request) {
     .slice(0, 3);
 
   const sessionId = crypto.randomUUID();
-  if (database) {
+  if (postgres) {
+    await postgres`
+      INSERT INTO users (id, email, display_name, role)
+      VALUES (${user.userId}, ${user.email}, ${user.fullName ?? user.displayName}, 'practitioner')
+      ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.display_name, updated_at = now()
+    `;
+    await postgres`
+      INSERT INTO research_sessions (id, owner_id, question, answer_mode, jurisdiction)
+      VALUES (${sessionId}, ${user.userId}, ${question}, ${mode}, ${jurisdiction})
+    `;
+  } else if (database) {
     await database.prepare(`
       INSERT INTO users (id, email, display_name, role)
       VALUES (?1, ?2, ?3, 'practitioner')
@@ -96,7 +156,15 @@ export async function POST(request: Request) {
     });
   }
 
-  if (database) {
+  if (postgres) {
+    for (const [index, passage] of ranked.entries()) {
+      const proposition = mode === "plain" ? passage.plainSummary : passage.professionalSummary;
+      await postgres`
+        INSERT INTO research_citations (id, research_session_id, passage_id, proposition, display_order)
+        VALUES (${crypto.randomUUID()}, ${sessionId}, ${passage.id}, ${proposition ?? "Source passage"}, ${index + 1})
+      `;
+    }
+  } else if (database) {
     await database.batch(ranked.map((passage, index) => database.prepare(`
       INSERT INTO research_citations (id, research_session_id, passage_id, proposition, display_order)
       VALUES (?1, ?2, ?3, ?4, ?5)

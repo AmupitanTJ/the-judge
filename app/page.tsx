@@ -9,6 +9,7 @@ type Matter = { id:string; title:string; reference:string|null; jurisdiction:str
 type Viewer = { displayName:string; email:string };
 type ResearchPassage = { id:string; provisionLabel:string; textContent:string; canonicalTitle:string; citation:string|null; sourceUrl:string; sourcePublisher:string; legalStatus:string; lastVerifiedAt:string|null };
 type ResearchResult = { sessionId:string; status:"grounded"|"insufficient_coverage"; shortAnswer:string|null; passages:ResearchPassage[]; limitations:string; verifiedAsOf:string };
+type ResearchSession = { id:string; question:string; answerMode:"professional"|"plain"; jurisdiction:string; createdAt:string; citationCount:number };
 
 const navItems = ["Ask The Judge", "Research", "Library", "Documents", "Matters"];
 
@@ -30,6 +31,7 @@ export default function Home() {
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
   const [libraryQuery, setLibraryQuery] = useState("");
   const [matters, setMatters] = useState<Matter[]>([]);
+  const [researchSessions, setResearchSessions] = useState<ResearchSession[]>([]);
   const [matterTitle, setMatterTitle] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -40,6 +42,7 @@ export default function Home() {
   useEffect(() => {
     if (active === "Library") loadLibrary();
     if (active === "Matters") loadMatters();
+    if (active === "Research") loadResearchHistory();
   }, [active]);
 
   async function loadLibrary(search = "") {
@@ -57,6 +60,15 @@ export default function Home() {
       const response = await fetch("/api/matters");
       const data = response.ok ? await response.json() : { matters: [] };
       setMatters(data.matters ?? []);
+    } finally { setLoading(false); }
+  }
+
+  async function loadResearchHistory() {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/research");
+      const data = response.ok ? await response.json() : { sessions: [] };
+      setResearchSessions(data.sessions ?? []);
     } finally { setLoading(false); }
   }
 
@@ -148,7 +160,19 @@ export default function Home() {
           </div>
         </header>
 
-        {active === "Library" ? (
+        {active === "Research" ? (
+          <section className="collection-view">
+            <div className="collection-head"><div><p className="eyebrow">Saved evidence trail</p><h1>Research history</h1><p>Your questions are stored with the authorities used for each answer.</p></div><span className="count-badge">{researchSessions.length} sessions</span></div>
+            <div className="research-history">
+              {loading ? <p className="empty-state">Loading your research history…</p> : researchSessions.length ? researchSessions.map((session) => (
+                <article className="research-history-card" key={session.id}>
+                  <div><span className="eyebrow">{session.jurisdiction} · {session.answerMode}</span><h3>{session.question}</h3></div>
+                  <footer><span>{session.citationCount} {session.citationCount === 1 ? "authority" : "authorities"} · {new Date(session.createdAt).toLocaleDateString("en-NG", { day:"numeric", month:"short", year:"numeric" })}</span><button onClick={() => { setQuery(session.question); setSubmitted(false); setActive("Ask The Judge"); }}>Research again →</button></footer>
+                </article>
+              )) : <div className="empty-panel"><span>R</span><h3>No saved research yet</h3><p>Ask a supported legal question and its evidence trail will appear here.</p></div>}
+            </div>
+          </section>
+        ) : active === "Library" ? (
           <section className="collection-view">
             <div className="collection-head"><div><p className="eyebrow">Foundation legal corpus</p><h1>Legal library</h1><p>Search authority metadata by title, citation, or document type.</p></div><span className="count-badge">{documents.length} authorities</span></div>
             <form className="library-search" onSubmit={(event) => { event.preventDefault(); loadLibrary(libraryQuery); }}>
