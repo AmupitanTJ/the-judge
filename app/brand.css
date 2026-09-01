@@ -1,0 +1,21 @@
+.brand-mark {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+}
+
+@media (max-width: 900px) {
+  .brand-mark {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+  }
+}
+
+@media (max-width: 640px) {
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+}

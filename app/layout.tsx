@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Geist } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
+import "./brand.css";
 
 const sans = Geist({ variable: "--font-sans", subsets: ["latin"] });
 const serif = Cormorant_Garamond({ variable: "--font-serif", subsets: ["latin"], weight: ["500", "600", "700"] });
