@@ -1,21 +1,28 @@
 .brand-mark {
-  width: 52px;
-  height: 52px;
-  flex: 0 0 52px;
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+  border: 0;
+  background: #000 url("/brand/the-judge-page-logo.png") center / contain no-repeat;
+  box-shadow: 0 0 0 1px #555;
+}
+
+.brand-mark img {
+  display: none;
 }
 
 @media (max-width: 900px) {
   .brand-mark {
-    width: 48px;
-    height: 48px;
-    flex-basis: 48px;
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
   }
 }
 
 @media (max-width: 640px) {
   .brand-mark {
-    width: 42px;
-    height: 42px;
-    flex-basis: 42px;
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
   }
 }
