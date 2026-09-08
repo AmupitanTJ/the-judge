@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Geist } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import "./brand.css";
+import "./source-directory.css";
 
 const sans = Geist({ variable: "--font-sans", subsets: ["latin"] });
 const serif = Cormorant_Garamond({ variable: "--font-serif", subsets: ["latin"], weight: ["500", "600", "700"] });
@@ -27,5 +28,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body className={`${sans.variable} ${serif.variable}`}>{children}</body></html>;
+  return (
+    <html lang="en">
+      <body className={`${sans.variable} ${serif.variable}`}>
+        {children}
+        <a className="source-directory-link" href="/sources" aria-label="Open The Judge legal source directory">Sources</a>
+      </body>
+    </html>
+  );
 }
