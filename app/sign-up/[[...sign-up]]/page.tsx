@@ -21,7 +21,13 @@ export default function SignUpPage() {
       <section className="auth-form">
         <div className="auth-form-inner">
           <div className="auth-form-head"><p>Get started</p><h2>Create your account</h2></div>
-          <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" forceRedirectUrl="/" />
+          <SignUp
+            routing="path"
+            path="/sign-up"
+            signInUrl="/sign-in"
+            forceRedirectUrl="/"
+            appearance={{ elements: { headerTitle: "auth-clerk-hidden", headerSubtitle: "auth-clerk-hidden" } }}
+          />
         </div>
       </section>
     </main>

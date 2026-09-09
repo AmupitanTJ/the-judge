@@ -26,6 +26,7 @@
 .auth-form-head { margin-bottom:26px; }
 .auth-form-head p { margin:0 0 8px; text-transform:uppercase; letter-spacing:.14em; font-size:9px; color:#686868; }
 .auth-form-head h2 { margin:0; font-family:var(--font-serif); font-size:38px; font-weight:500; }
+.auth-clerk-hidden { display:none!important; }
 
 @media (max-width:820px) {
   .auth-page { grid-template-columns:1fr; }.auth-intro { min-height:300px; padding:28px 24px; }.auth-message { padding:54px 0 20px; }.auth-message h1 { font-size:48px; }.auth-foot { display:none; }.auth-form { padding:38px 20px 60px; }
