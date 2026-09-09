@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Cormorant_Garamond, Geist } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import "./brand.css";
-import "./source-directory.css";
 
 const sans = Geist({ variable: "--font-sans", subsets: ["latin"] });
 const serif = Cormorant_Garamond({ variable: "--font-serif", subsets: ["latin"], weight: ["500", "600", "700"] });
@@ -31,8 +31,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className={`${sans.variable} ${serif.variable}`}>
-        {children}
-        <a className="source-directory-link" href="/sources" aria-label="Open The Judge legal source directory">Sources</a>
+        <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up" afterSignOutUrl="/sign-in">
+          {children}
+        </ClerkProvider>
       </body>
     </html>
   );

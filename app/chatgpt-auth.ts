@@ -1,4 +1,5 @@
-import { cookies, headers } from "next/headers";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 export type ChatGPTUser = {
@@ -19,34 +20,25 @@ const SIGN_OUT_PATH = "/signout-with-chatgpt";
 const CALLBACK_PATH = "/callback";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
+  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY) {
+    const { userId } = await auth();
+    if (!userId) return null;
+    const clerkUser = await currentUser();
+    const email = clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses[0]?.emailAddress;
+    if (!email) return null;
+    const fullName = clerkUser?.fullName || [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(" ") || null;
+    return {
+      userId,
+      displayName: fullName ?? email,
+      email,
+      fullName,
+    };
+  }
+
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);
-  if (!userId || !email) {
-    const workspaceFallback =
-      Boolean(process.env.VERCEL) || process.env.NODE_ENV === "development";
-    if (workspaceFallback) {
-      const cookieStore = await cookies();
-      let workspaceId = cookieStore.get("judge_workspace_id")?.value;
-      if (!workspaceId || !/^[0-9a-f-]{36}$/i.test(workspaceId)) {
-        workspaceId = crypto.randomUUID();
-        cookieStore.set("judge_workspace_id", workspaceId, {
-          httpOnly: true,
-          secure: Boolean(process.env.VERCEL),
-          sameSite: "lax",
-          maxAge: 60 * 60 * 24 * 365,
-          path: "/",
-        });
-      }
-      return {
-        userId: `workspace-${workspaceId}`,
-        displayName: "Private workspace",
-        email: `${workspaceId}@workspace.thejudge.ng`,
-        fullName: "Private workspace",
-      };
-    }
-    return null;
-  }
+  if (!userId || !email) return null;
 
   const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
   const fullName =

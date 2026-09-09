@@ -58,7 +58,7 @@ export default function SourcesPage() {
             <span>Publisher and collection</span><span>Coverage</span><span>Status</span>
           </div>
           {[...LEGAL_SOURCES].sort((a, b) => a.priority - b.priority).map((source) => (
-            <article className={styles.row} role="row" key={source.id}>
+            <div className={styles.row} role="row" key={source.id}>
               <div>
                 <span className={styles.kind}>{source.authority} · {source.jurisdiction}</span>
                 <h3>{source.name}</h3>
@@ -70,7 +70,7 @@ export default function SourcesPage() {
                 <small>{source.usePolicy}</small>
               </div>
               <span className={`${styles.status} ${styles[source.status.replaceAll(" ", "").toLowerCase()]}`}>{source.status}</span>
-            </article>
+            </div>
           ))}
         </div>
       </section>

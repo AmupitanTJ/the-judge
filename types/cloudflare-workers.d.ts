@@ -6,6 +6,7 @@ interface D1Result<T = Record<string, unknown>> {
 interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
   all<T = Record<string, unknown>>(): Promise<D1Result<T>>;
+  first<T = Record<string, unknown>>(columnName?: string): Promise<T | null>;
   run(): Promise<D1Result>;
 }
 

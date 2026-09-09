@@ -5,6 +5,7 @@ export const verifiedDocuments = [
     citation: "Cap C23, LFN 2004",
     documentType: "Constitution",
     jurisdiction: "Federal",
+    issuingBody: "Federal Republic of Nigeria",
     sourceUrl: "https://lawsofnigeria.placng.org/laws/C23.pdf",
     sourcePublisher: "PLAC Laws of Nigeria",
     legalStatus: "amendment_review_required",
@@ -58,6 +59,7 @@ export const verifiedPassages = [
   },
 ].map((passage) => ({
   ...passage,
+  documentId: verifiedDocuments[0].id,
   canonicalTitle: verifiedDocuments[0].canonicalTitle,
   citation: verifiedDocuments[0].citation,
   sourceUrl: verifiedDocuments[0].sourceUrl,

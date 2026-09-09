@@ -11,13 +11,14 @@
     "start": "next start",
     "dev:sites": "vinext dev",
     "build:sites": "vinext build",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs tests/research-answer.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "db:migrate:vercel": "node --env-file=.env.local scripts/migrate-postgres.mjs",
     "db:verify:vercel": "node --env-file=.env.local scripts/verify-postgres.mjs"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.1",
     "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "0.45.2",
     "next": "^16.2.6",
