@@ -6,6 +6,8 @@ test("answer builder refuses invention and requires federal jurisdiction", async
   const source = await readFile(new URL("../lib/research-answer.ts", import.meta.url), "utf8");
   assert.match(source, /will not invent an answer without matching authority/);
   assert.match(source, /jurisdictionNeedsClarification/);
+  assert.match(source, /resolveResearchJurisdiction/);
+  assert.match(source, /Federal jurisdiction was inferred/);
   assert.match(source, /needs_clarification/);
   assert.match(source, /governingLaw/);
   assert.match(source, /amendment_review_required/);

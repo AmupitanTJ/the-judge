@@ -53,6 +53,25 @@ export function jurisdictionNeedsClarification(jurisdiction: string) {
   return jurisdiction !== FOUNDATION_JURISDICTION;
 }
 
+const CLEARLY_FEDERAL_CONSTITUTIONAL_QUESTION = /\b(nigerian constitution|constitution(?:al)? supremacy|constitution.{0,35}(?:highest|supreme)|highest law (?:of|in) nigeria|national assembly|exclusive legislative list)\b/i;
+const CLEARLY_LOCAL_QUESTION = /\b(lagos|fct|abuja|state law|tenancy|land use|customary|sharia|islamic|local government|bye[- ]?law|by[- ]?law)\b/i;
+
+export function resolveResearchJurisdiction(question: string, requestedJurisdiction: string) {
+  const inferFederal =
+    requestedJurisdiction !== FOUNDATION_JURISDICTION &&
+    CLEARLY_FEDERAL_CONSTITUTIONAL_QUESTION.test(question) &&
+    !CLEARLY_LOCAL_QUESTION.test(question);
+
+  return {
+    requestedJurisdiction,
+    jurisdiction: inferFederal ? FOUNDATION_JURISDICTION : requestedJurisdiction,
+    jurisdictionWasInferred: inferFederal,
+    jurisdictionNotice: inferFederal
+      ? `Federal jurisdiction was inferred because the question asks about the Nigerian Constitution. Your ${requestedJurisdiction} selection was not used for this answer.`
+      : null,
+  };
+}
+
 function summaryFor(passage: PassageRow, mode: AnswerMode) {
   return (mode === "plain" ? passage.plainSummary : passage.professionalSummary)?.trim() || null;
 }
@@ -88,6 +107,8 @@ export function presentAnswer(input: {
   practiceArea?: string;
   passages: PassageRow[];
   status?: AnswerStatus;
+  requestedJurisdiction?: string;
+  jurisdictionNotice?: string | null;
 }) {
   const { sessionId, question, mode, jurisdiction, practiceArea, passages } = input;
   if (input.status === "needs_clarification" || jurisdictionNeedsClarification(jurisdiction)) {
@@ -98,6 +119,8 @@ export function presentAnswer(input: {
       answerMode: mode,
       shortAnswer: null,
       jurisdiction,
+      requestedJurisdiction: input.requestedJurisdiction ?? jurisdiction,
+      jurisdictionNotice: input.jurisdictionNotice ?? null,
       assumptions: assumptions(jurisdiction),
       governingLaw: null,
       analysis: [],
@@ -126,6 +149,8 @@ export function presentAnswer(input: {
       answerMode: mode,
       shortAnswer: null,
       jurisdiction,
+      requestedJurisdiction: input.requestedJurisdiction ?? jurisdiction,
+      jurisdictionNotice: input.jurisdictionNotice ?? null,
       assumptions: assumptions(jurisdiction),
       governingLaw: null,
       analysis: [],
@@ -158,6 +183,8 @@ export function presentAnswer(input: {
     answerMode: mode,
     shortAnswer: analysis[0] ? `${analysis[0].proposition} [${analysis[0].displayOrder}]` : null,
     jurisdiction,
+    requestedJurisdiction: input.requestedJurisdiction ?? jurisdiction,
+    jurisdictionNotice: input.jurisdictionNotice ?? null,
     assumptions: assumptions(jurisdiction),
     governingLaw: `${titles.join("; ")} — ${provisions}.`,
     analysis,

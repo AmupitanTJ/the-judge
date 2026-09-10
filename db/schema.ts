@@ -21,6 +21,22 @@ export const matters = sqliteTable("matters", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_matters_owner_updated").on(table.ownerId, table.updatedAt)]);
 
+export const userDocuments = sqliteTable("user_documents", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  matterId: text("matter_id").references(() => matters.id, { onDelete: "set null" }),
+  filename: text("filename").notNull(),
+  pathname: text("pathname").notNull(),
+  blobUrl: text("blob_url").notNull(),
+  contentType: text("content_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  status: text("status").notNull().default("uploaded"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("idx_user_documents_pathname").on(table.pathname),
+  index("idx_user_documents_owner_created").on(table.ownerId, table.createdAt),
+]);
+
 export const legalDocuments = sqliteTable("legal_documents", {
   id: text("id").primaryKey(),
   canonicalTitle: text("canonical_title").notNull(),

@@ -7,6 +7,7 @@ import {
   jurisdictionNeedsClarification,
   presentAnswer,
   rankPassages,
+  resolveResearchJurisdiction,
   type AnswerMode,
   type PassageRow,
 } from "../../../lib/research-answer";
@@ -69,7 +70,9 @@ export async function POST(request: Request) {
 
   const question = payload.question?.trim().slice(0, 1200) ?? "";
   const mode: AnswerMode = payload.mode === "plain" ? "plain" : "professional";
-  const jurisdiction = payload.jurisdiction?.trim().slice(0, 80) || FOUNDATION_JURISDICTION;
+  const requestedJurisdiction = payload.jurisdiction?.trim().slice(0, 80) || FOUNDATION_JURISDICTION;
+  const jurisdictionResolution = resolveResearchJurisdiction(question, requestedJurisdiction);
+  const jurisdiction = jurisdictionResolution.jurisdiction;
   const practiceArea = payload.practiceArea?.trim().slice(0, 80) || "All practice areas";
   const matterId = payload.matterId && UUID.test(payload.matterId) ? payload.matterId : null;
   if (question.length < 8) return Response.json({ error: "Please enter a fuller legal question." }, { status: 400 });
@@ -165,7 +168,17 @@ export async function POST(request: Request) {
 
   if (jurisdictionNeedsClarification(jurisdiction)) {
     return Response.json({
-      ...presentAnswer({ sessionId, question, mode, jurisdiction, practiceArea, passages: [], status: "needs_clarification" }),
+      ...presentAnswer({
+        sessionId,
+        question,
+        mode,
+        jurisdiction,
+        requestedJurisdiction,
+        jurisdictionNotice: jurisdictionResolution.jurisdictionNotice,
+        practiceArea,
+        passages: [],
+        status: "needs_clarification",
+      }),
       persistence: persist,
     });
   }
@@ -178,6 +191,8 @@ export async function POST(request: Request) {
       question,
       mode,
       jurisdiction,
+      requestedJurisdiction,
+      jurisdictionNotice: jurisdictionResolution.jurisdictionNotice,
       practiceArea,
       passages: ranked,
       status: ranked.length ? "grounded" : "insufficient_coverage",

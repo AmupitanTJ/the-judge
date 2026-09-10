@@ -20,6 +20,21 @@ CREATE TABLE IF NOT EXISTS matters (
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS idx_matters_owner_updated ON matters(owner_id, updated_at DESC);
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS user_documents (
+  id text PRIMARY KEY,
+  owner_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  matter_id text REFERENCES matters(id) ON DELETE SET NULL,
+  filename text NOT NULL,
+  pathname text NOT NULL UNIQUE,
+  blob_url text NOT NULL,
+  content_type text NOT NULL,
+  size_bytes bigint NOT NULL,
+  status text NOT NULL DEFAULT 'uploaded',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS idx_user_documents_owner_created ON user_documents(owner_id, created_at DESC);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS legal_documents (
   id text PRIMARY KEY,
   canonical_title text NOT NULL,

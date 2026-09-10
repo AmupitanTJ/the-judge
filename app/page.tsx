@@ -7,6 +7,7 @@ import Link from "next/link";
 import { LEGAL_SOURCES } from "../db/legal-sources";
 import { JURISDICTIONS, PRACTICE_AREAS } from "../lib/coverage";
 import { remapAnswerMode, type AnswerMode } from "../lib/research-answer";
+import { DocumentUpload } from "./components/document-upload";
 
 type LegalDocument = {
   id: string;
@@ -45,6 +46,8 @@ type ResearchResult = {
   answerMode: AnswerMode;
   shortAnswer: string | null;
   jurisdiction: string;
+  requestedJurisdiction?: string;
+  jurisdictionNotice?: string | null;
   assumptions: string[];
   governingLaw: string | null;
   analysis: { proposition: string; citationLabel: string; passageId: string; displayOrder: number }[];
@@ -56,6 +59,16 @@ type ResearchResult = {
   why: { method: string; coverage: string; assumptions: string[]; retrievedPassageIds: string[] };
 };
 type ResearchSession = { id: string; question: string; answerMode: AnswerMode; jurisdiction: string; createdAt: string; citationCount: number };
+type UserDocument = {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  status: string;
+  matterId: string | null;
+  matterTitle: string | null;
+  createdAt: string;
+};
 type SavedAuthority = {
   id: string;
   documentId: string;
@@ -132,6 +145,7 @@ export default function Home() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [resizingSidebar, setResizingSidebar] = useState(false);
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
+  const [privateDocuments, setPrivateDocuments] = useState<UserDocument[]>([]);
   const [libraryQuery, setLibraryQuery] = useState("");
   const [matters, setMatters] = useState<Matter[]>([]);
   const [researchSessions, setResearchSessions] = useState<ResearchSession[]>([]);
@@ -171,6 +185,7 @@ export default function Home() {
     if (active === "Research") loadResearchHistory();
     if (active === "Saved") loadSaved();
     if (active === "Updates") loadCoverage();
+    if (active === "Documents") loadPrivateDocuments();
   }, [active]);
 
   async function loadLibrary(search = "") {
@@ -218,6 +233,21 @@ export default function Home() {
       setCoverageRows(data.matrix ?? []);
       setCoverageSummary(data.summary ?? "");
     } finally { setLoading(false); }
+  }
+
+  async function loadPrivateDocuments() {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/documents");
+      const data = response.ok ? await response.json() : { documents: [] };
+      setPrivateDocuments(data.documents ?? []);
+    } finally { setLoading(false); }
+  }
+
+  function formatBytes(value: number) {
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   async function openSource(documentId: string, highlightPassageId?: string, fromAnswer = false) {
@@ -348,7 +378,7 @@ export default function Home() {
         <div>
           <div className="sidebar-head">
             <Link className="brand" href="/" aria-label="The Judge home">
-              <span className="brand-mark"><Image src="/brand/the-judge-app-icon.png" alt="" width={35} height={35} priority /></span>
+              <span className="brand-mark"><Image src="/brand/the-judge-app-icon.png" alt="" width={48} height={48} priority /></span>
               <span>THE JUDGE</span>
             </Link>
             <button className="collapse-sidebar" type="button" onClick={() => setSidebarCollapsed((value) => !value)} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? "›" : "‹"}</button>
@@ -501,11 +531,22 @@ export default function Home() {
           </section>
         ) : active === "Documents" ? (
           <section className="collection-view">
-            <div className="collection-head"><div><p className="eyebrow">Private materials</p><h1>Documents</h1><p>Confidential uploads stay isolated from the legal corpus.</p></div></div>
-            <div className="docs-privacy">
+            <div className="collection-head"><div><p className="eyebrow">Private materials</p><h1>Documents</h1><p>Confidential uploads stay isolated from the verified legal corpus.</p></div><span className="count-badge">{privateDocuments.length} files</span></div>
+            <div className="docs-privacy upload-ready">
               <span>D</span>
-              <h3>Private document review is not yet enabled</h3>
-              <p>PDF and DOCX upload will be isolated, encrypted, access-controlled, and governed by retention settings. The Judge will not train models on client uploads by default. This workspace will not accept files until those controls are in place.</p>
+              <h3>Upload a private case document</h3>
+              <p>Files are stored in private object storage and can only be opened through your signed-in account. Uploading does not add a file to The Judge’s verified law library.</p>
+              {selectedMatter ? <p className="upload-matter">Adding to: <strong>{selectedMatter.title}</strong></p> : null}
+              <DocumentUpload matterId={selectedMatterId} onUploaded={loadPrivateDocuments} />
+            </div>
+            <div className="private-document-list" aria-live="polite">
+              {loading ? <p className="empty-state">Loading your documents…</p> : privateDocuments.length ? privateDocuments.map((document) => (
+                <article key={document.id} className="private-document-row">
+                  <span className="document-glyph" aria-hidden="true">D</span>
+                  <div><strong>{document.filename}</strong><small>{document.matterTitle || "General workspace"} · {formatBytes(Number(document.sizeBytes))} · {formatDate(document.createdAt)}</small></div>
+                  <a href={`/api/documents/${document.id}`}>Download</a>
+                </article>
+              )) : <p className="empty-state">No private documents uploaded yet.</p>}
             </div>
           </section>
         ) : active === "Matters" ? (
@@ -520,7 +561,10 @@ export default function Home() {
                   <p>{matter.reference || "No client reference"}</p>
                   <footer>
                     <span>Active</span>
-                    <button onClick={() => { setSelectedMatterId(matter.id); setJurisdiction((JURISDICTIONS as readonly string[]).includes(matter.jurisdiction) ? matter.jurisdiction as (typeof JURISDICTIONS)[number] : "Federal"); setActive("Ask The Judge"); setQuery(""); setSubmitted(false); }}>Open research →</button>
+                    <span className="matter-actions">
+                      <button onClick={() => { setSelectedMatterId(matter.id); setActive("Documents"); }}>Add document</button>
+                      <button onClick={() => { setSelectedMatterId(matter.id); setJurisdiction((JURISDICTIONS as readonly string[]).includes(matter.jurisdiction) ? matter.jurisdiction as (typeof JURISDICTIONS)[number] : "Federal"); setActive("Ask The Judge"); setQuery(""); setSubmitted(false); }}>Open research →</button>
+                    </span>
                   </footer>
                 </article>
               )) : <div className="empty-panel"><span>M</span><h3>No matters yet</h3><p>Create a private matter to organise research, authorities, and documents.</p></div>}
@@ -548,6 +592,12 @@ export default function Home() {
         ) : active === "Updates" ? (
           <section className="collection-view">
             <div className="collection-head"><div><p className="eyebrow">Corpus currency</p><h1>Updates</h1><p>{coverageSummary || "An honest coverage matrix for the foundation corpus."}</p></div></div>
+            <div className="verification-guide">
+              <article><strong>Source verified</strong><p>The exact passage was checked against the named source and may be used in answers.</p></article>
+              <article><strong>Catalogue only</strong><p>An official or reputable collection has been identified, but its documents are not yet passage-verified.</p></article>
+              <article><strong>Not started</strong><p>No passage-level legal review has been completed, so The Judge will not cite it as authority.</p></article>
+            </div>
+            <p className="verification-note">At present, only the displayed provisions of sections 1 and 4 of the 1999 Constitution are source-verified. The Constitution record still requires amendment review. <Link href="/sources">See the source register and methodology →</Link></p>
             <div className="coverage-table" role="table" aria-label="Coverage matrix">
               <div className="coverage-row coverage-labels" role="row"><span>Jurisdiction</span><span>Document type</span><span>Scope</span><span>Review</span><span>Last verified</span></div>
               {loading ? <p className="empty-state">Loading coverage…</p> : coverageRows.map((row) => (
@@ -588,7 +638,7 @@ export default function Home() {
                   <select id="practice-area" value={practiceArea} onChange={(event) => setPracticeArea(event.target.value as (typeof PRACTICE_AREAS)[number])}>
                     {PRACTICE_AREAS.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
-                  <button type="button" disabled title="Private document upload is not yet enabled" aria-label="Attach a document">⌕</button>
+                  <DocumentUpload compact matterId={selectedMatterId} onUploaded={loadPrivateDocuments} />
                 </div>
                 <button className="submit" aria-label="Submit question">↑</button>
               </div>
@@ -616,6 +666,7 @@ export default function Home() {
             <div className="result-main">
               <button className="back" onClick={() => setSubmitted(false)}>← New question</button>
               <p className="workspace-banner">Jurisdiction: {researchResult?.jurisdiction || jurisdiction} · Coverage: Foundation · Verified as of {researchResult?.verifiedAsOf || "—"}</p>
+              {researchResult?.jurisdictionNotice ? <div className="jurisdiction-notice"><strong>Jurisdiction inferred</strong><span>{researchResult.jurisdictionNotice}</span></div> : null}
               <p className="eyebrow">Research question</p>
               <h2>{query}</h2>
               <div className="mode-switch" role="group" aria-label="Answer mode">

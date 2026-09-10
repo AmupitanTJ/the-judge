@@ -12,7 +12,8 @@ test("contains The Judge research interface", async () => {
   assert.match(page, /Saved/);
   assert.match(page, /Updates/);
   assert.match(page, /Why this answer/);
-  assert.match(page, /Private document review is not yet enabled/);
+  assert.match(page, /Upload a private case document/);
+  assert.match(page, /DocumentUpload/);
   assert.doesNotMatch(page, /Landlord’s right to recover premises|Your site is taking shape|Building your site/);
 });
 
