@@ -103,6 +103,14 @@ const navItems = [
   { key: "Profile", label: "Profile", glyph: "P" },
 ] as const;
 
+function SignOutIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M8 4H4v12h4M12 6l4 4-4 4M7 10h9" />
+    </svg>
+  );
+}
+
 function labelStatus(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -127,7 +135,7 @@ function answerPlainText(result: ResearchResult) {
 
 export default function Home() {
   const { user } = useUser();
-  const { openUserProfile } = useClerk();
+  const { openUserProfile, signOut } = useClerk();
   const [mode, setMode] = useState<AnswerMode>("professional");
   const [active, setActive] = useState("Ask The Judge");
   const [query, setQuery] = useState("");
@@ -431,6 +439,7 @@ export default function Home() {
           <div className="top-actions">
             {selectedMatter ? <span className="matter-chip">Matter · {selectedMatter.title}</span> : null}
             <button className="invite" type="button" disabled title="Team workspaces are post-MVP">Invite your team</button>
+            <button className="sign-out-button" type="button" onClick={() => void signOut({ redirectUrl: "/sign-in" })} aria-label="Log out" title="Log out"><SignOutIcon /></button>
           </div>
         </header>
 

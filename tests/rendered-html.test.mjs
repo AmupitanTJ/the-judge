@@ -3,7 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("contains The Judge research interface", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const [page, upload, authStyles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/document-upload.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth.css", import.meta.url), "utf8"),
+  ]);
   assert.match(page, /THE JUDGE/);
   assert.match(page, /Nigerian legal intelligence/);
   assert.match(page, /source-backed answers/i);
@@ -14,6 +18,11 @@ test("contains The Judge research interface", async () => {
   assert.match(page, /Why this answer/);
   assert.match(page, /Upload a private case document/);
   assert.match(page, /DocumentUpload/);
+  assert.match(page, /signOut/);
+  assert.match(page, /Log out/);
+  assert.match(upload, /UploadIcon/);
+  assert.match(upload, /M10 14V3/);
+  assert.match(authStyles, /width:108px/);
   assert.doesNotMatch(page, /Landlord’s right to recover premises|Your site is taking shape|Building your site/);
 });
 
