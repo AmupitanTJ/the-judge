@@ -27,6 +27,10 @@ This starter does not use `wrangler.jsonc`.
 - `examples/d1/` contains an optional D1 example surface
 - `drizzle.config.ts` supports local migration generation when needed
 
+## Corpus review access
+
+The restricted corpus console lives at `/admin/corpus`. Set `JUDGE_ADMIN_EMAILS` to a comma-separated list of trusted administrator email addresses in Vercel and locally. It creates an **intake** record only; source text cannot become citable until each passage has separately passed source verification.
+
 ## Workspace Auth Headers
 
 Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
