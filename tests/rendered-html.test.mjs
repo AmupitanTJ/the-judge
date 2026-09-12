@@ -76,3 +76,17 @@ test("source viewer and coverage surfaces exist", async () => {
   assert.match(coverageLib, /amendment_review_required/);
   assert.match(coverageLib, /Not in foundation corpus/);
 });
+
+test("corpus console verifies passages before research can use them", async () => {
+  const [consoleSource, passageRoute, corpusRoute] = await Promise.all([
+    readFile(new URL("../app/admin/corpus/corpus-console.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/admin/corpus/passages/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/admin/corpus/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(consoleSource, /Verify the exact legal text/);
+  assert.match(consoleSource, /checked this exact text against the named original source/);
+  assert.match(passageRoute, /confirmedAgainstSource/);
+  assert.match(passageRoute, /review_status = 'passage_verified'/);
+  assert.match(passageRoute, /'source_verified'/);
+  assert.doesNotMatch(corpusRoute, /"source_verified", "needs_review"/);
+});

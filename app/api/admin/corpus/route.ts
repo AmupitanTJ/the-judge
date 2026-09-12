@@ -34,9 +34,10 @@ export async function GET() {
     SELECT id, canonical_title AS "canonicalTitle", citation, document_type AS "documentType",
       jurisdiction, issuing_body AS "issuingBody", source_publisher AS "sourcePublisher",
       source_url AS "sourceUrl", legal_status AS "legalStatus", review_status AS "reviewStatus",
-      last_verified_at AS "lastVerifiedAt", created_at AS "createdAt"
+      last_verified_at AS "lastVerifiedAt", created_at AS "createdAt",
+      (SELECT COUNT(*)::integer FROM legal_passages p WHERE p.document_id = legal_documents.id AND p.review_status = 'source_verified') AS "verifiedPassageCount"
     FROM legal_documents
-    ORDER BY CASE review_status WHEN 'source_verified' THEN 2 ELSE 1 END, created_at DESC
+    ORDER BY CASE review_status WHEN 'passage_verified' THEN 2 ELSE 1 END, created_at DESC
     LIMIT 100
   `;
   return Response.json({ documents, collections: LEGAL_SOURCES, persistence: "postgres" });
@@ -75,11 +76,8 @@ export async function PATCH(request: Request) {
   if (!hasPostgres()) return Response.json({ error: "A production database is required to update review items." }, { status: 503 });
   let payload: { id?: string; reviewStatus?: string; legalStatus?: string };
   try { payload = await request.json(); } catch { return Response.json({ error: "Invalid request body." }, { status: 400 }); }
-  if (!payload.id || !["intake", "metadata_verified", "source_verified", "needs_review"].includes(payload.reviewStatus ?? "")) {
+  if (!payload.id || !["intake", "metadata_verified", "needs_review"].includes(payload.reviewStatus ?? "")) {
     return Response.json({ error: "Choose a valid document and review status." }, { status: 400 });
-  }
-  if (payload.reviewStatus === "source_verified") {
-    return Response.json({ error: "Passage verification is required before a document can be marked source verified." }, { status: 409 });
   }
   const sql = getPostgres();
   await sql`
