@@ -21,6 +21,11 @@ test("contains The Judge research interface", async () => {
   assert.match(page, /DocumentUpload/);
   assert.match(page, /signOut/);
   assert.match(page, /Log out/);
+  assert.match(page, /Citation workspace/);
+  assert.match(page, /Copy citation bundle/);
+  assert.match(page, /Verified corpus workflow/);
+  assert.match(page, /Every authority must pass four checks/);
+  assert.match(page, /formatAuthorityCitation/);
   assert.match(upload, /upload-plus/);
   assert.match(upload, /UploadPlusIcon/);
   assert.match(upload, /M12 5v14M5 12h14/);

@@ -77,6 +77,7 @@ type SavedAuthority = {
   canonicalTitle: string;
   citation: string | null;
   sourceUrl: string;
+  sourcePublisher: string;
   legalStatus: string;
   jurisdiction: string;
   lastVerifiedAt: string | null;
@@ -133,6 +134,12 @@ function answerPlainText(result: ResearchResult) {
   ].filter(Boolean).join("\n\n");
 }
 
+function formatAuthorityCitation(authority: Pick<ResearchPassage, "canonicalTitle" | "citation" | "provisionLabel" | "sourcePublisher" | "sourceUrl" | "lastVerifiedAt">) {
+  const reference = [authority.canonicalTitle, authority.citation, authority.provisionLabel].filter(Boolean).join(", ");
+  const verification = authority.lastVerifiedAt ? ` Verified ${authority.lastVerifiedAt}.` : " Verification date not recorded.";
+  return `${reference}. ${authority.sourcePublisher}.${verification} Available at: ${authority.sourceUrl}`;
+}
+
 export default function Home() {
   const { user } = useUser();
   const { openUserProfile, signOut } = useClerk();
@@ -146,6 +153,7 @@ export default function Home() {
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchError, setResearchError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [citationCopied, setCitationCopied] = useState<string | null>(null);
   const [whyOpen, setWhyOpen] = useState(false);
   const [selectedPassageId, setSelectedPassageId] = useState<string | null>(null);
   const [selectedMatterId, setSelectedMatterId] = useState<string | null>(null);
@@ -362,6 +370,17 @@ export default function Home() {
     window.setTimeout(() => setCopied(false), 2000);
   }
 
+  async function copyCitation(citation: string, identifier: string) {
+    await navigator.clipboard.writeText(citation);
+    setCitationCopied(identifier);
+    window.setTimeout(() => setCitationCopied((current) => current === identifier ? null : current), 2000);
+  }
+
+  async function copyCitationBundle() {
+    if (!savedAuthorities.length) return;
+    await copyCitation(savedAuthorities.map((authority, index) => `[${index + 1}] ${formatAuthorityCitation(authority)}`).join("\n\n"), "bundle");
+  }
+
   function startNewResearch() {
     setActive("Ask The Judge");
     setQuery("");
@@ -492,6 +511,12 @@ export default function Home() {
               <div><dt>Source</dt><dd><a href={sourceDocument.sourceUrl} target="_blank" rel="noreferrer">{sourceDocument.sourcePublisher} ↗</a></dd></div>
               <div><dt>Last verified</dt><dd>{sourceDocument.lastVerifiedAt ? formatDate(sourceDocument.lastVerifiedAt) : "Not recorded"}</dd></div>
             </dl>
+            <div className="source-viewer-actions">
+              <button className="copy-button" type="button" onClick={() => void copyCitation(formatAuthorityCitation({ ...sourceDocument, provisionLabel: "", sourcePublisher: sourceDocument.sourcePublisher }), `source-${sourceDocument.id}`)}>
+                {citationCopied === `source-${sourceDocument.id}` ? "Citation copied" : "Copy authority citation"}
+              </button>
+              <span>Only passages marked source verified are available for answers.</span>
+            </div>
             {sourceLoading ? <p className="empty-state">Loading verified passages…</p> : sourcePassages.map((passage) => (
               <article key={passage.id} className={sourceHighlight === passage.id ? "passage-block highlighted" : "passage-block"} id={passage.id}>
                 <p className="eyebrow">{passage.provisionLabel}</p>
@@ -581,7 +606,8 @@ export default function Home() {
           </section>
         ) : active === "Saved" ? (
           <section className="collection-view">
-            <div className="collection-head"><div><p className="eyebrow">Authorities you have used</p><h1>Saved</h1><p>Passages cited in your research, with source status preserved.</p></div><span className="count-badge">{savedAuthorities.length} authorities</span></div>
+            <div className="collection-head"><div><p className="eyebrow">Authorities you have used</p><h1>Citation workspace</h1><p>Passages cited in your research, with their exact source, legal status and verification date preserved.</p></div><button className="copy-bundle" type="button" disabled={!savedAuthorities.length} onClick={() => void copyCitationBundle()}>{citationCopied === "bundle" ? "Citation bundle copied" : "Copy citation bundle"}</button></div>
+            <p className="citation-workspace-note">This workspace collects authorities from your grounded research sessions only. It does not turn a catalogue entry into a verified authority.</p>
             <div className="research-history">
               {loading ? <p className="empty-state">Loading saved authorities…</p> : savedAuthorities.length ? savedAuthorities.map((authority) => (
                 <article className="research-history-card" key={authority.id}>
@@ -589,10 +615,11 @@ export default function Home() {
                     <span className="eyebrow">{authority.jurisdiction} · {authority.provisionLabel} · used {authority.useCount}×</span>
                     <h3>{authority.canonicalTitle}</h3>
                     <p className="saved-excerpt">“{authority.textContent}”</p>
+                    <p className="citation-preview">{formatAuthorityCitation(authority)}</p>
                   </div>
                   <footer>
                     <span>{labelStatus(authority.legalStatus)} · {authority.lastVerifiedAt ? formatDate(authority.lastVerifiedAt) : "Unverified date"}</span>
-                    <button onClick={() => openSource(authority.documentId, authority.id)}>Open source →</button>
+                    <span className="citation-actions"><button type="button" onClick={() => void copyCitation(formatAuthorityCitation(authority), authority.id)}>{citationCopied === authority.id ? "Copied" : "Copy citation"}</button><button type="button" onClick={() => openSource(authority.documentId, authority.id)}>Open source →</button></span>
                   </footer>
                 </article>
               )) : <div className="empty-panel"><span>S</span><h3>No saved authorities yet</h3><p>Cited passages from grounded answers will appear here.</p></div>}
@@ -601,11 +628,28 @@ export default function Home() {
         ) : active === "Updates" ? (
           <section className="collection-view">
             <div className="collection-head"><div><p className="eyebrow">Corpus currency</p><h1>Updates</h1><p>{coverageSummary || "An honest coverage matrix for the foundation corpus."}</p></div></div>
+            <section className="corpus-pipeline" aria-labelledby="corpus-pipeline-title">
+              <div><p className="eyebrow">Verified corpus workflow</p><h2 id="corpus-pipeline-title">Every authority must pass four checks</h2><p>Records remain catalogued until their source text, metadata and legal currency have been reviewed. The Judge does not answer from a source merely because it has been found.</p></div>
+              <ol>
+                <li><strong>01 · Source intake</strong><span>Start with an official publisher or an approved discovery source. Record licence terms before copying text.</span></li>
+                <li><strong>02 · Authority record</strong><span>Capture the canonical title, issuing body, jurisdiction, source URL, publication details and version.</span></li>
+                <li><strong>03 · Passage verification</strong><span>Check each quoted provision against the named authority. Only then may it be used in a response.</span></li>
+                <li><strong>04 · Currency review</strong><span>Check amendments, commencement, repeal and later treatment before relying on the authority.</span></li>
+              </ol>
+            </section>
             <div className="verification-guide">
               <article><strong>Source verified</strong><p>The exact passage was checked against the named source and may be used in answers.</p></article>
               <article><strong>Catalogue only</strong><p>An official or reputable collection has been identified, but its documents are not yet passage-verified.</p></article>
               <article><strong>Not started</strong><p>No passage-level legal review has been completed, so The Judge will not cite it as authority.</p></article>
             </div>
+            <section className="intake-register" aria-labelledby="intake-register-title">
+              <div><p className="eyebrow">Next intake sources</p><h2 id="intake-register-title">Official collections ready for review</h2><p>These sources are registered for controlled intake; they are not automatically quoted as law.</p></div>
+              <div className="intake-register-list">
+                {LEGAL_SOURCES.filter((source) => source.status === "Approved").slice(0, 4).map((source) => (
+                  <article key={source.id}><span>{source.authority}</span><h3>{source.name}</h3><p>{source.publisher} · {source.jurisdiction}</p><a href={source.url} target="_blank" rel="noreferrer">Review original source ↗</a></article>
+                ))}
+              </div>
+            </section>
             <p className="verification-note">At present, only the displayed provisions of sections 1 and 4 of the 1999 Constitution are source-verified. The Constitution record still requires amendment review. <Link href="/sources">See the source register and methodology →</Link></p>
             <div className="coverage-table" role="table" aria-label="Coverage matrix">
               <div className="coverage-row coverage-labels" role="row"><span>Jurisdiction</span><span>Document type</span><span>Scope</span><span>Review</span><span>Last verified</span></div>
