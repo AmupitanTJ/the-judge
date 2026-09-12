@@ -23,7 +23,10 @@ export default function CorpusConsole() {
     setMessage(data.message ?? "Only passage-verified text can be cited by The Judge.");
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => { void load(); });
+    return () => window.cancelAnimationFrame(frame);
+  }, [load]);
 
   async function addIntake(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setMessage("Saving intake record…");
