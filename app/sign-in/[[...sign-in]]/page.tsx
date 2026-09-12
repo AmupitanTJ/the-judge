@@ -8,7 +8,7 @@ export default function SignInPage() {
     <main className="auth-page">
       <section className="auth-intro">
         <Link className="auth-brand" href="/sources">
-          <Image src="/brand/the-judge-page-logo.png" width={108} height={108} alt="The Judge" priority />
+          <Image src="/brand/the-judge-page-logo.png" width={144} height={144} alt="The Judge" priority />
           <span>THE JUDGE</span>
         </Link>
         <div className="auth-message">

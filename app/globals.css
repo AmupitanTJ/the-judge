@@ -53,7 +53,7 @@ nav { display:grid; gap:4px; }
 .top-actions button { height:34px; background:transparent; border:1px solid var(--line); }
 .sign-out-button { width:34px; display:grid; place-items:center; padding:0; }
 .sign-out-button:hover { background:var(--ink); color:white; border-color:var(--ink); }
-.sign-out-button svg,.upload-icon { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.sign-out-button svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
 .icon-button { width:34px; border-radius:50%; }
 .invite { padding:0 15px; }
 .ask-view { min-height:calc(100vh - 70px); max-width:1040px; margin:auto; padding:9vh 54px 28px; display:flex; flex-direction:column; }
@@ -186,6 +186,7 @@ button:focus-visible,a:focus-visible,textarea:focus-visible,select:focus-visible
 .document-upload small { color:var(--muted); }
 .document-upload p { margin:2px 0 0; color:var(--ink); font-size:11px; }
 .document-upload.compact { display:inline-block; margin:0; }
+.upload-plus { display:block; font-family:Arial,sans-serif; font-size:22px; font-weight:300; line-height:1; transform:translateY(-1px); }
 .private-document-list { margin-top:26px; border-top:1px solid var(--line); }
 .private-document-row { min-height:76px; display:grid; grid-template-columns:38px minmax(0,1fr) auto; gap:14px; align-items:center; border-bottom:1px solid var(--line); padding:12px; }
 .private-document-row>div { display:grid; gap:5px; min-width:0; }

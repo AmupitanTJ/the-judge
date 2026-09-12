@@ -20,9 +20,11 @@ test("contains The Judge research interface", async () => {
   assert.match(page, /DocumentUpload/);
   assert.match(page, /signOut/);
   assert.match(page, /Log out/);
-  assert.match(upload, /UploadIcon/);
-  assert.match(upload, /M10 14V3/);
-  assert.match(authStyles, /width:108px/);
+  assert.match(upload, /upload-plus/);
+  assert.match(upload, />\+<\/span>/);
+  assert.match(authStyles, /width:144px/);
+  assert.match(authStyles, /align-self:center/);
+  assert.match(authStyles, /transform:translateY\(48px\)/);
   assert.doesNotMatch(page, /Landlord’s right to recover premises|Your site is taking shape|Building your site/);
 });
 
