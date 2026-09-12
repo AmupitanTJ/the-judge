@@ -22,9 +22,10 @@ test("contains The Judge research interface", async () => {
   assert.match(page, /signOut/);
   assert.match(page, /Log out/);
   assert.match(upload, /upload-plus/);
-  assert.match(upload, />\+<\/span>/);
+  assert.match(upload, /UploadPlusIcon/);
+  assert.match(upload, /M12 5v14M5 12h14/);
   assert.match(globalStyles, /width:44px; height:44px/);
-  assert.match(globalStyles, /font-size:30px/);
+  assert.match(globalStyles, /width:30px; height:30px/);
   assert.match(authStyles, /width:144px/);
   assert.match(authStyles, /align-self:center/);
   assert.match(authStyles, /transform:translateY\(48px\)/);

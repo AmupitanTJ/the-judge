@@ -12,6 +12,14 @@ type Props = {
   onUploaded?: () => void;
 };
 
+function UploadPlusIcon() {
+  return (
+    <svg className="upload-plus" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
 export function DocumentUpload({ matterId = null, compact = false, onUploaded }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -58,7 +66,7 @@ export function DocumentUpload({ matterId = null, compact = false, onUploaded }:
         }}
       />
       <button type="button" disabled={uploading} onClick={() => inputRef.current?.click()} aria-label="Upload a private document" title={compact ? "Upload document" : undefined}>
-        {compact ? <span className="upload-plus" aria-hidden="true">+</span> : uploading ? `Uploading ${progress}%` : "Choose document"}
+        {compact ? <UploadPlusIcon /> : uploading ? `Uploading ${progress}%` : "Choose document"}
       </button>
       {compact ? null : <small>PDF, DOC, DOCX or TXT · up to 25 MB · private to your account</small>}
       {message ? <p role="status">{message}</p> : null}

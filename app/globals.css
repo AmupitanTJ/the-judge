@@ -187,7 +187,7 @@ button:focus-visible,a:focus-visible,textarea:focus-visible,select:focus-visible
 .document-upload p { margin:2px 0 0; color:var(--ink); font-size:11px; }
 .document-upload.compact { display:inline-block; margin:0; }
 .document-upload.compact>button { width:44px; height:44px; min-height:44px; padding:0; display:grid; place-items:center; }
-.upload-plus { display:grid; place-items:center; width:1em; height:1em; font-family:Arial,sans-serif; font-size:30px; font-weight:300; line-height:1; transform:translateY(1px); }
+.upload-plus { width:30px; height:30px; display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
 .private-document-list { margin-top:26px; border-top:1px solid var(--line); }
 .private-document-row { min-height:76px; display:grid; grid-template-columns:38px minmax(0,1fr) auto; gap:14px; align-items:center; border-bottom:1px solid var(--line); padding:12px; }
 .private-document-row>div { display:grid; gap:5px; min-width:0; }
